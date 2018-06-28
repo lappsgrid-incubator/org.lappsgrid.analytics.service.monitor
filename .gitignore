@@ -5,4 +5,3 @@ target/
 *.ipr
 VERSION
 src/main/java/**/Version.java
-
