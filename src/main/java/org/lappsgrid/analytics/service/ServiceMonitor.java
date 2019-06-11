@@ -19,11 +19,16 @@ import jp.go.nict.langrid.service_1_2.foundation.typed.Period;
 import jp.go.nict.langrid.service_1_2.foundation.servicemanagement.ServiceEntry;
 
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.OutputStream;
+import java.io.PrintStream;
 import java.lang.reflect.Array;
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
 import java.util.Arrays;
 import java.util.Calendar;
 import java.util.List;
@@ -60,8 +65,14 @@ public class ServiceMonitor implements Runnable
 	@Option(names="--brandeis", description = "query the Brandeis server")
 	private boolean brandeis = false;
 
-	@Option(names={"-y", "--year"}, paramLabel = "YYYY", required = true, description = "the year to gather statistics for.")
-	private int year = 2018;
+	@Option(names={"-s", "--start"}, paramLabel = "dd-MM-yyyy", required = true, description = "start date.")
+	private String startDate;
+
+	@Option(names={"-e", "--end"}, paramLabel="dd-MM-yyyy", required = true, description="end date.")
+	private String endDate;
+
+	@Option(names={"-o", "--output"}, paramLabel="path", description = "directory where output file will be written.")
+	private File destination = null;
 
 	@Option (names={"-v", "--version"}, description = "prints the app version number and exits.", versionHelp = true)
 	private boolean showVersion = false;
@@ -102,8 +113,7 @@ public class ServiceMonitor implements Runnable
 			CommandLine.usage(this, System.out);
 			return;
 		}
-		System.out.println("User:     " + username);
-		System.out.println("Password: " + password);
+
 		try
 		{
 			act();
@@ -115,7 +125,7 @@ public class ServiceMonitor implements Runnable
 	}
 
 
-	private void act() throws MalformedURLException, UnknownException, InvalidParameterException, ServiceConfigurationException, AccessLimitExceededException, NoAccessPermissionException
+	private void act() throws MalformedURLException, UnknownException, InvalidParameterException, ServiceConfigurationException, AccessLimitExceededException, NoAccessPermissionException, ParseException, FileNotFoundException
 	{
 		db = new Database();
 
@@ -137,39 +147,36 @@ public class ServiceMonitor implements Runnable
 			return;
 		}
 
-		System.out.println("Processing " + year);
 		for (ServiceEntry entry : entries) {
 			String fullId = entry.getServiceId();
 			String[] parts = fullId.split(":");
 			String grid = parts[0];
 			String id = parts[1];
-			stats(id, year);
+			stats(id, startDate, endDate);
 		}
-		File file = new File(server + "-" + year + ".txt");
-		try (FileOutputStream stream = new FileOutputStream(file)) {
-			db.write(stream);
-			System.out.println("Wrote " + file.getPath());
+		OutputStream out = System.out;
+		if (destination != null) {
+			out = new FileOutputStream(destination);
 		}
-		catch (IOException e) {
-			e.printStackTrace();
-		}
+		db.write(out);
 	}
 
 	/**
 	 * Collect statistic for a single service in a given year.
 	 *
 	 * @param name the service we are collecting stats for
-	 * @param year the year to be counted
+	 * @param startDate string representation of the start date
+	 * @param endDate string representation of the end date
 	 * @throws UnknownException
 	 * @throws InvalidParameterException
 	 * @throws ServiceConfigurationException
 	 * @throws AccessLimitExceededException
 	 * @throws NoAccessPermissionException
 	 */
-	protected void stats(String name, int year) throws UnknownException, InvalidParameterException, ServiceConfigurationException, AccessLimitExceededException, NoAccessPermissionException
+	protected void stats(String name, String startDate, String endDate) throws ParseException, UnknownException, InvalidParameterException, ServiceConfigurationException, AccessLimitExceededException, NoAccessPermissionException
 	{
-		Calendar start = CalendarUtil.create(year, 1, 1);
-		Calendar end = CalendarUtil.create(year, 12, 31);
+		Calendar start = parseTime(startDate);
+		Calendar end = parseTime(endDate);
 
 		UserAccessEntrySearchResult result = service.sumUpUserAccess(0, 100, name, start, end, Period.YEAR.toString(), new Order[0]);
 		UserAccessEntry[] entries = result.getElements();
@@ -178,6 +185,14 @@ public class ServiceMonitor implements Runnable
 			Record record = new Record(entry.getUserId(), entry.getServiceId(), entry.getAccessCount());
 			db.add(record);
 		}
+	}
+
+	protected Calendar parseTime(String time) throws ParseException
+	{
+		SimpleDateFormat date = new SimpleDateFormat("dd-MM-yyyy");
+		Calendar calendar = Calendar.getInstance();
+		calendar.setTime(date.parse(time));
+		return calendar;
 	}
 
 	public static void main(String[] args) {

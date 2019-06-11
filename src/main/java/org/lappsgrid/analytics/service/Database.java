@@ -3,6 +3,7 @@ package org.lappsgrid.analytics.service;
 import java.io.OutputStream;
 import java.io.PrintStream;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -61,13 +62,23 @@ public class Database
 			out = new PrintStream(stream);
 		}
 
+		long total = 0;
+		List<Record> allRecords = new ArrayList<Record>();
 		for (Map.Entry<String,List<Record>> entry : serviceIndex.entrySet()) {
 			List<Record> records = entry.getValue();
-			for (Record record : records)
-			{
-				out.printf("%s,%s,%d\n", record.getUser(), record.getService(), record.getCount());
-			}
+			allRecords.addAll(records);
+//			for (Record record : records)
+//			{
+//				total += record.getCount();
+//				out.printf("%s,%s,%d\n", record.getUser(), record.getService(), record.getCount());
+//			}
 		}
+		Collections.sort(allRecords);
+		for (Record record : allRecords) {
+			total += record.getCount();
+			out.printf("%s,%s,%d\n", record.getUser(), record.getService(), record.getCount());
+		}
+		out.printf("Total service calls: %d\n", total);
 	}
 
 	protected void add(Map<String,List<Record>> index, String key, Record record) {
