@@ -61,13 +61,16 @@ public class Database
 			out = new PrintStream(stream);
 		}
 
+		long total = 0;
 		for (Map.Entry<String,List<Record>> entry : serviceIndex.entrySet()) {
 			List<Record> records = entry.getValue();
 			for (Record record : records)
 			{
+				total += record.getCount();
 				out.printf("%s,%s,%d\n", record.getUser(), record.getService(), record.getCount());
 			}
 		}
+		out.printf("Total service calls: %d\n", total);
 	}
 
 	protected void add(Map<String,List<Record>> index, String key, Record record) {
