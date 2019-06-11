@@ -3,7 +3,7 @@ package org.lappsgrid.analytics.service;
 /**
  *
  */
-public class Record
+public class Record implements Comparable<Record>
 {
 	private String user;
 	private String service;
@@ -46,5 +46,11 @@ public class Record
 
 	public boolean equals(Object object) {
 		return cache.equals(object.toString());
+	}
+
+	@Override
+	public int compareTo(Record o)
+	{
+		return o.count - this.count;
 	}
 }
