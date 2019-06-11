@@ -19,8 +19,11 @@ import jp.go.nict.langrid.service_1_2.foundation.typed.Period;
 import jp.go.nict.langrid.service_1_2.foundation.servicemanagement.ServiceEntry;
 
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.OutputStream;
+import java.io.PrintStream;
 import java.lang.reflect.Array;
 import java.net.MalformedURLException;
 import java.net.URL;
@@ -62,8 +65,6 @@ public class ServiceMonitor implements Runnable
 	@Option(names="--brandeis", description = "query the Brandeis server")
 	private boolean brandeis = false;
 
-	//@Option(names={"-y", "--year"}, paramLabel = "YYYY", required = true, description = "the year to gather statistics for.")
-	//private int year = 2018;
 	@Option(names={"-s", "--start"}, paramLabel = "dd-MM-yyyy", required = true, description = "start date.")
 	private String startDate;
 
@@ -112,8 +113,7 @@ public class ServiceMonitor implements Runnable
 			CommandLine.usage(this, System.out);
 			return;
 		}
-//		System.out.println("User:     " + username);
-//		System.out.println("Password: " + password);
+
 		try
 		{
 			act();
@@ -125,7 +125,7 @@ public class ServiceMonitor implements Runnable
 	}
 
 
-	private void act() throws MalformedURLException, UnknownException, InvalidParameterException, ServiceConfigurationException, AccessLimitExceededException, NoAccessPermissionException, ParseException
+	private void act() throws MalformedURLException, UnknownException, InvalidParameterException, ServiceConfigurationException, AccessLimitExceededException, NoAccessPermissionException, ParseException, FileNotFoundException
 	{
 		db = new Database();
 
@@ -147,7 +147,6 @@ public class ServiceMonitor implements Runnable
 			return;
 		}
 
-//		System.out.println("Processing " + startDate + " - " + endDate);
 		for (ServiceEntry entry : entries) {
 			String fullId = entry.getServiceId();
 			String[] parts = fullId.split(":");
@@ -155,28 +154,11 @@ public class ServiceMonitor implements Runnable
 			String id = parts[1];
 			stats(id, startDate, endDate);
 		}
-//		File file = null;
-//		String filename = server + "-" + endDate + ".txt";
-//		if (destination == null) {
-//			file = new File(filename);
-//		}
-//		else {
-//			if (!destination.exists()) {
-//				if (!destination.mkdirs()) {
-//					System.out.println("Could not create the output directory");
-//					return;
-//				}
-//			}
-//			file = new File(destination, filename);
-//		}
-//		try (FileOutputStream stream = new FileOutputStream(file)) {
-//			db.write(stream);
-//			System.out.println("Wrote " + file.getPath());
-//		}
-//		catch (IOException e) {
-//			e.printStackTrace();
-//		}
-		db.write(System.out);
+		OutputStream out = System.out;
+		if (destination != null) {
+			out = new FileOutputStream(destination);
+		}
+		db.write(out);
 	}
 
 	/**
